@@ -117,17 +117,24 @@ Note: Birthday Reminders are specific to this group only.`, tele.ModeMarkdown)
 		name := args[0]
 		dateStr := args[1]
 
-		var d, m int
-		_, err = fmt.Sscanf(dateStr, "%d-%d", &d, &m)
+		// parse date using a dummy year
+		fullDateStr := fmt.Sprintf("%s-2024", dateStr)
+		parsedDate, err := time.Parse("02-01-2006", fullDateStr)
+
 		if err != nil {
-			return c.Send("Invalid date. Use DD-MM")
+			return c.Send("Invalid Date! Please use a valid date in DD-MM format.")
 		}
+
+		//now extract day and month
+		d := parsedDate.Day()
+		m := int(parsedDate.Month())
 
 		// insert to table
 		_, err = db.Exec("INSERT INTO birthdays (group_id, name, day, month) VALUES (?, ?, ?, ?) ON CONFLICT (group_id, name) DO UPDATE SET day = EXCLUDED.day, month = EXCLUDED.month", c.Chat().ID, name, d, m)
 
 		if err != nil {
-			return c.Send("error savinf bday to db")
+			log.Println("Add error:", err)
+			return c.Send("Error saving birthday to database")
 		}
 
 		return c.Send(fmt.Sprintf("Added %s's birthday on %02d-%02d to list!", name, d, m))
